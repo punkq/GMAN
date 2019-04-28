@@ -95,7 +95,7 @@ class GMAN:
             # Define Generator losses
             with tf.variable_scope('G_Loss'):
                 if ls_loss:
-                    self.get_G_ls_loss(mixing, obj=objective)
+                    self.get_G_ls_loss(mixing)
                 elif boosting_variant is None:
                     self.get_G_loss(mixing, obj=objective)
                 else:
