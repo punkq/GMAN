@@ -1,33 +1,35 @@
 #!/bin/bash
-mixing=(arithmetic harmonic)
-#weighting=( normal log )
-lam=(0 1)
-runs=(2 3 4 5)
-disc=(2 5)
 
-objective=(original modified)
-for r in "${runs[@]}"
+numDisc=(1 2 5 10)
+dropout=(True False)
+lsloss=(True False)
+
+for n in "${numDisc[@]}"
 do
-for o in "${objective[@]}"
+for d in "${dropout[@]}"
 do
-python GMAN.py --dataset cifar --num_disc 1 --num_hidden 256 --epochs 50 --lam 0. --path "cifar/1_${o}_256_${1}"
+for l in "${lsloss[@]}"
+do
+for m in {arithmetic,geometric,harmonic}
+do
+
+fname="NumDisc_"$n"_Dropout_"$d"_LSloss_"$l"_"$m
+log=$fname".log"
+
+python GMAN.py --dataset mnist --num_disc $n --dropout $d --ls_loss $l --mixing $m --lam 1. --objective modified --path mnist/$fname >> log/$log
+
+while true;do
+	grep -n "model.ckpt-24" disc1.txt
+		if [ $? -ne 0 ]; then
+			echo 'waiting ...'
+		else
+			break
+		fi
+	sleep 60
+done
+
+done
+done
 done
 done
 
-for r in "${runs[@]}"
-do
-#for m in "${mixing[@]}"
-#do
-for l in "${lam[@]}"
-do
-for d in "${disc[@]}"
-do
-#for w in "${weighting[@]}"
-#do
-fname=$disc"_"$l"_256_"$r
-echo $fname
-python GMAN.py --dataset cifar --num_disc $disc --num_hidden 256 --epochs 50 --lam $l --path cifar/$fname
-done
-done
-#done
-done
