@@ -439,8 +439,11 @@ def main(_):
                         max_Dr.append(_max_Dr)
 
                         if (k + 1) % 10 == 0:
-                            print('epoch %d, minibatch: %d, D_Loss: %0.4f, G_Loss: %0.4f, V: %0.4f, Df: [%0.4f,%0.4f], Dr: [%0.4f,%0.4f]'
-                                  % (j, k, np.mean(D_losses), np.mean(G_loss), np.mean(V), min(min_Df), max(max_Df), min(min_Dr), max(max_Dr)))
+                            info = 'epoch %d, minibatch: %d, D_Loss: %0.4f, G_Loss: %0.4f, V: %0.4f, Df: [%0.4f,%0.4f], Dr: [%0.4f,%0.4f]' \
+                                   % (j, k, np.mean(D_losses), np.mean(G_loss), np.mean(V), min(min_Df), max(max_Df), min(min_Dr), max(max_Dr))
+                            print(info)
+                            with open("log/%s.log" % FLAGS.path, 'a+') as f:
+                                f.write(info+"\n")
                             G_loss = []
                             D_losses = []
                             V = []
