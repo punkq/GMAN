@@ -86,7 +86,7 @@ class GMAN:
             # Define Discriminator losses
             with tf.variable_scope('D_Loss'):
                 if ls_loss:
-                    self.get_D_ls_losses(obj=objective)
+                    self.get_D_ls_losses()
                 elif boosting_variant is None:
                     self.get_D_losses(obj=objective)
                 else:

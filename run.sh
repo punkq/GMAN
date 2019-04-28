@@ -1,7 +1,7 @@
 #!/bin/bash
 
-numDisc=(1)
-dropout=(True)
+numDisc=(1, 2, 5 10)
+dropout=(True False)
 lsloss=(True False)
 
 for n in "${numDisc[@]}"
