@@ -19,7 +19,7 @@ log=$fname".log"
 python GMAN.py --dataset mnist --num_disc $n --dropout $d --ls_loss $l --mixing $m --lam 1. --objective modified --path mnist/$fname >> log/$log
 
 while true;do
-	grep -n "model.ckpt-24" disc1.txt
+	grep -n "model.ckpt-24" log/$log
 		if [ $? -ne 0 ]; then
 			echo 'waiting ...'
 		else
