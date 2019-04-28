@@ -380,7 +380,7 @@ def main(_):
         with tf.device('/gpu:0'):
             # Construct GMAN and run initializer
             gman = GMAN(FLAGS.latent, FLAGS.image_size, FLAGS.batch_size, FLAGS.num_disc, FLAGS.dropout,
-                        num_channels=num_c, num_hidden=FLAGS.num_hidden,
+                        FLAGS.ls_loss, num_channels=num_c, num_hidden=FLAGS.num_hidden,
                         mixing=FLAGS.mixing, weight_type=FLAGS.weighting,
                         objective=FLAGS.objective, boosting_variant=boosting_variant,
                         self_challenged=FLAGS.self_learnt)
