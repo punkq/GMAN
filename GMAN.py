@@ -184,7 +184,7 @@ class GMAN:
         # Define minimax objectives for discriminators
         self.V_D = [tf.reduce_mean(tf.log(self.Dr[ind])+tf.log(1-self.Df[ind])) for ind in range(len(self.Dr))]
 
-    def get_G_boosted_loss(self, boosting_variant, mixing,obj='original'):
+    def get_G_boosted_loss(self, boosting_variant, mixing, obj='original'):
         # Define lambda placeholder
         self.l = tf.placeholder(tf.float32, name='lambda')
 
@@ -223,7 +223,7 @@ class GMAN:
 
         tf.summary.scalar('G_loss', self.G_loss)
 
-    def get_D_losses(self):
+    def get_D_losses(self, obj='original'):
         # logits --> probabilities
         self.Df = [sigmoid(logit) for logit in self.Df_logits]
         self.Dr = [sigmoid(logit) for logit in self.Dr_logits]
