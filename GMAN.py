@@ -95,7 +95,7 @@ class GMAN:
             # Define Generator losses
             with tf.variable_scope('G_Loss'):
                 if ls_loss:
-                    self.get_G_ls_losses(mixing, obj=objective)
+                    self.get_G_ls_loss(mixing, obj=objective)
                 elif boosting_variant is None:
                     self.get_G_loss(mixing, obj=objective)
                 else:
@@ -267,7 +267,7 @@ class GMAN:
                                   mean_typ=mixing, weight_typ=self.weight_type,
                                   sign=sign)
 
-    def get_D_ls_loss(self):
+    def get_D_ls_losses(self):
         # logits --> probabilities
         self.Df = [sigmoid(logit) for logit in self.Df_logits]
         self.Dr = [sigmoid(logit) for logit in self.Dr_logits]
