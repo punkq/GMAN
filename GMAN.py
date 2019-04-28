@@ -9,8 +9,8 @@ from time import time
 
 
 class GMAN:
-    def __init__(self, num_latent, num_out, batch_size, num_disc, num_channels=3,
-                 num_hidden=1024, D_weights=None, G_weights=None, name='GMAN',
+    def __init__(self, num_latent, num_out, batch_size, num_disc, dropout, ls_loss,
+                 num_channels=3, num_hidden=1024, D_weights=None, G_weights=None, name='GMAN',
                  mixing='arithmetic', weight_type='normal', objective='original',
                  boosting_variant=None, self_challenged=False):
         self.num_latent = num_latent
@@ -19,8 +19,16 @@ class GMAN:
         self.num_hidden = num_hidden
         self.batch_size = batch_size
         self.N = num_disc
+
+        # dropout paras
         self.base_prob = 0.4
         self.delta_p = (0.6 - self.base_prob) / self.N
+
+        if dropout:
+            self.keep_prob = [self.base_prob + self.delta_p * (ind + 1) for ind in range(self.N)]
+        else:
+            self.keep_prob = [1.0 for ind in range(self.N)]
+
         self.h_adv = num_hidden
         self.name = name
         self.weight_type = weight_type
@@ -44,8 +52,7 @@ class GMAN:
                 fake_split = [self.fake]*self.N
 
             # Discriminate fake images
-            self.Df_logits = [discriminator(self, fake_split[ind], ind, (self.base_prob + self.delta_p * (ind + 1)),
-                                            reuse=False)
+            self.Df_logits = [discriminator(self, fake_split[ind], ind, self.keep_prob[ind], reuse=False)
                               for ind in range(self.N)]
             
             # Retrieve real images
@@ -57,8 +64,7 @@ class GMAN:
                 real_split = [self.real]*self.N
             
             # Discriminate real images
-            self.Dr_logits = [discriminator(self, real_split[ind], ind, (self.base_prob + self.delta_p * (ind + 1)),
-                                            reuse=True)
+            self.Dr_logits = [discriminator(self, real_split[ind], ind, self.keep_prob[ind], reuse=True)
                               for ind in range(self.N)]
 
             # Retrieve trainable weights
@@ -79,14 +85,18 @@ class GMAN:
 
             # Define Discriminator losses
             with tf.variable_scope('D_Loss'):
-                if boosting_variant is None:
+                if ls_loss:
+                    self.get_D_ls_losses(obj=objective)
+                elif boosting_variant is None:
                     self.get_D_losses(obj=objective)
                 else:
                     self.get_D_boosted_losses(boosting_variant, obj=objective)
 
             # Define Generator losses
             with tf.variable_scope('G_Loss'):
-                if boosting_variant is None:
+                if ls_loss:
+                    self.get_G_ls_losses(mixing, obj=objective)
+                elif boosting_variant is None:
                     self.get_G_loss(mixing, obj=objective)
                 else:
                     self.get_G_boosted_loss(boosting_variant, mixing, obj=objective)
@@ -119,8 +129,8 @@ class GMAN:
         # Compute expectation of booster prediction
         _Df_logits = tf.concat(axis=1, values=self.Df_logits)
         _Dr_logits = tf.concat(axis=1, values=self.Dr_logits)
-        _Df = tf.cumsum(alpha*_Df_logits,axis=1,exclusive=False)
-        _Dr = tf.cumsum(alpha*_Dr_logits,axis=1,exclusive=False)
+        _Df = tf.cumsum(alpha*_Df_logits, axis=1, exclusive=False)
+        _Dr = tf.cumsum(alpha*_Dr_logits, axis=1, exclusive=False)
         Df_weighted = v/tf.reduce_sum(v)*_Df
         Dr_weighted = v/tf.reduce_sum(v)*_Dr
         self.Df_expected = tf.reduce_sum(Df_weighted,axis=1)
@@ -213,7 +223,7 @@ class GMAN:
 
         tf.summary.scalar('G_loss', self.G_loss)
 
-    def get_D_losses(self, obj='original'):
+    def get_D_losses(self):
         # logits --> probabilities
         self.Df = [sigmoid(logit) for logit in self.Df_logits]
         self.Dr = [sigmoid(logit) for logit in self.Dr_logits]
@@ -246,6 +256,46 @@ class GMAN:
             self.G_losses = [tf.reduce_mean(-tf.log(self.Df[ind]))
                              for ind in range(len(self.Df))]
             sign = 1.
+        _G_losses = [tf.expand_dims(loss, 0) for loss in self.G_losses]
+        _G_losses = tf.concat(axis=0, values=_G_losses)
+        self.G_loss = mix_prediction(_G_losses, self.used_l,
+                                     mean_typ=mixing, weight_typ=self.weight_type,
+                                     sign=sign)
+
+        # Define minimax objectives for generator
+        self.V_G = mix_prediction(self.V_D, self.used_l,
+                                  mean_typ=mixing, weight_typ=self.weight_type,
+                                  sign=sign)
+
+    def get_D_ls_loss(self):
+        # logits --> probabilities
+        self.Df = [sigmoid(logit) for logit in self.Df_logits]
+        self.Dr = [sigmoid(logit) for logit in self.Dr_logits]
+
+        self.D_losses = [tf.reduce_mean(-tf.square(self.Dr[ind]-1) - tf.square(self.Df[ind]))
+                         for ind in range(len(self.Dr))]
+
+        # Define minimax objectives for discriminators
+        self.V_D = [tf.reduce_mean(tf.square(self.Dr[ind]-1) + tf.square(self.Df[ind])) for ind in range(len(self.Dr))]
+
+    def get_G_ls_loss(self, mixing):
+        # Define lambda placeholder
+        self.l = tf.placeholder(tf.float32, name='lambda')
+
+        # if lambda is self_learnt
+        if self.self_challenged:
+            trained_l = tf.Variable(initial_value=-2., name='controlled_lambda')
+            tf.summary.scalar('lambda_learnt', trained_l)
+            self.used_l = tf.nn.softplus(trained_l, name='used_lambda')
+            tf.summary.scalar('lambda_used', self.used_l)
+        else:
+            self.used_l = self.l
+
+        # Define generator loss
+        self.G_losses = [tf.reduce_mean(-tf.square(self.Df[ind]-1))
+                             for ind in range(len(self.Df))]
+        sign = 1.
+
         _G_losses = [tf.expand_dims(loss, 0) for loss in self.G_losses]
         _G_losses = tf.concat(axis=0, values=_G_losses)
         self.G_loss = mix_prediction(_G_losses, self.used_l,
@@ -329,7 +379,7 @@ def main(_):
     with tf.Session(config=config) as sess:
         with tf.device('/gpu:0'):
             # Construct GMAN and run initializer
-            gman = GMAN(FLAGS.latent, FLAGS.image_size, FLAGS.batch_size, FLAGS.num_disc,
+            gman = GMAN(FLAGS.latent, FLAGS.image_size, FLAGS.batch_size, FLAGS.num_disc, FLAGS.dropout,
                         num_channels=num_c, num_hidden=FLAGS.num_hidden,
                         mixing=FLAGS.mixing, weight_type=FLAGS.weighting,
                         objective=FLAGS.objective, boosting_variant=boosting_variant,
@@ -414,10 +464,10 @@ def main(_):
                     print('Model saved as %s' % mpath)
 
             images = sess.run(gman.fake, feed_dict=feed_dict)[:batch_size]
-            plot_fakes(images,num_c,batch_size,c,filename=path+'/final.png')
+            plot_fakes(images, num_c, batch_size, c, filename=path+'/final.png')
             
 
-def plot_fakes(images,num_c,batch_size,c,filename):
+def plot_fakes(images, num_c, batch_size, c, filename):
     f, axarr = plt.subplots(10, 10)
     images = (np.add(images, 1.) / 2.)
     if num_c == 1:
@@ -436,7 +486,8 @@ if __name__ == '__main__':
     flags.DEFINE_integer("iterations", 600, "Iterations per epoch [600]")
     flags.DEFINE_integer("latent", 100, "number of latent variables. [100]")
     flags.DEFINE_float("learning_rate", 0.0002, "Learning rate of for adam [0.0002]")
-    # flags.DEFINE_float("dropout", 0.7, "dropout probability. [0.7]")
+    flags.DEFINE_boolean("dropout", True, "dropout prob [0.4 : 0.6 : 0.2/Num_Disc]")
+    flags.DEFINE_boolean("ls_loss", False, "LSGANs loss")
     flags.DEFINE_float("lam", 1., "Factor controlling how much the mixing moves towards a max. [1.]")
     flags.DEFINE_integer("batch_size", 100, "The size of batch images [100]")
     flags.DEFINE_integer("image_size", 32, "The size of the output images to produce [64]")
