@@ -1,6 +1,6 @@
 #!/bin/bash
 
-numDisc=(1 2 5 10)
+numDisc=$1
 dropout=(True False)
 lsloss=(True False)
 
