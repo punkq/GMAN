@@ -272,11 +272,12 @@ class GMAN:
         self.Df = [sigmoid(logit) for logit in self.Df_logits]
         self.Dr = [sigmoid(logit) for logit in self.Dr_logits]
 
-        self.D_losses = [tf.reduce_mean(-tf.square(self.Dr[ind]-1) - tf.square(self.Df[ind]))
+
+        self.D_losses = [0.5*tf.square(tf.reduce_mean(self.Dr[ind])-1) + 0.5*tf.square(tf.reduce_mean(self.Df[ind]))
                          for ind in range(len(self.Dr))]
 
         # Define minimax objectives for discriminators
-        self.V_D = [tf.reduce_mean(tf.square(self.Dr[ind]-1) + tf.square(self.Df[ind])) for ind in range(len(self.Dr))]
+        self.V_D = [ -0.5*tf.square(tf.reduce_mean(self.Dr[ind])-1) - 0.5*tf.square(tf.reduce_mean(self.Df[ind])) for ind in range(len(self.Dr))]
 
     def get_G_ls_loss(self, mixing):
         # Define lambda placeholder
@@ -292,7 +293,7 @@ class GMAN:
             self.used_l = self.l
 
         # Define generator loss
-        self.G_losses = [tf.reduce_mean(-tf.square(self.Df[ind]-1))
+        self.G_losses = [tf.square(tf.reduce_mean(self.Df[ind])-1)
                              for ind in range(len(self.Df))]
         sign = 1.
 
@@ -326,7 +327,6 @@ class GMAN:
         for ind in range(len(self.V_D)):
             tf.summary.scalar('V_D_%d' % ind, self.V_D[ind])
         tf.summary.scalar('V_G', self.V_G)
-
 
 
 
