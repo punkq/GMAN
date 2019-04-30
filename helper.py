@@ -189,8 +189,8 @@ def mix_prediction(losses, lam=0., mean_typ='arithmetic', weight_typ='normal', s
     if mean_typ == 'arithmetic':
         loss = weighted_arithmetic(weights, losses)
     elif mean_typ == 'geometric':
-        log_losses = tf.log(sign*losses)
-        loss = sign*tf.exp(weighted_arithmetic(1/tf.reduce_sum(tf.ones_like(losses)), log_losses))
+        log_losses = tf.log(int(sign)*losses)
+        loss = sign*tf.exp(weighted_arithmetic(tf.ones_like(losses)/tf.reduce_sum(tf.ones_like(losses)), log_losses))
     else:
         mn = tf.reduce_min(losses) - sf
         inv_losses = tf.reciprocal(losses-mn)
