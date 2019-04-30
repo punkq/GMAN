@@ -269,8 +269,8 @@ class GMAN:
 
     def get_D_ls_losses(self):
         # logits --> probabilities
-        self.Df = [sigmoid(logit) for logit in self.Df_logits]
-        self.Dr = [sigmoid(logit) for logit in self.Dr_logits]
+        self.Df = [tf.sigmoid(logit) for logit in self.Df_logits]
+        self.Dr = [tf.sigmoid(logit) for logit in self.Dr_logits]
 
 
         self.D_losses = [0.5*tf.square(tf.reduce_mean(self.Dr[ind])-1) + 0.5*tf.square(tf.reduce_mean(self.Df[ind]))
@@ -293,7 +293,7 @@ class GMAN:
             self.used_l = self.l
 
         # Define generator loss
-        self.G_losses = [tf.square(tf.reduce_mean(self.Df[ind])-1)
+        self.G_losses = [0.5*tf.square(tf.reduce_mean(self.Df[ind])-1)
                              for ind in range(len(self.Df))]
         sign = 1.
 
