@@ -489,7 +489,7 @@ if __name__ == '__main__':
     flags.DEFINE_integer("iterations", 600, "Iterations per epoch [600]")
     flags.DEFINE_integer("latent", 100, "number of latent variables. [100]")
     flags.DEFINE_float("learning_rate", 0.0002, "Learning rate of for adam [0.0002]")
-    flags.DEFINE_boolean("dropout", True, "dropout prob [0.4 : 0.6 : 0.2/Num_Disc]")
+    flags.DEFINE_boolean("dropout", False, "dropout prob [0.4 : 0.6 : 0.2/Num_Disc]")
     flags.DEFINE_boolean("ls_loss", False, "LSGANs loss")
     flags.DEFINE_float("lam", 1., "Factor controlling how much the mixing moves towards a max. [1.]")
     flags.DEFINE_integer("batch_size", 100, "The size of batch images [100]")
