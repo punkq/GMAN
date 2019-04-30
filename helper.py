@@ -168,7 +168,7 @@ def conv2d(input, filter_shape, bias_shape, stride=2, name='conv'):
     return conv + bias
 
 
-def mix_prediction(losses, lam=0., mean_typ='arithmetic', weight_typ='normal', sign=-1., sf=1e-3):
+def mix_prediction(losses, lam=0., mean_typ='arithmetic', weight_typ='normal', sign=-1., sf=1e-5):
     # losses is shape (# of discriminators x batch_size)
     # output is scalar
 
@@ -190,7 +190,7 @@ def mix_prediction(losses, lam=0., mean_typ='arithmetic', weight_typ='normal', s
         loss = weighted_arithmetic(weights, losses)
     elif mean_typ == 'geometric':
         log_losses = tf.log(sign*losses)
-        loss = sign*tf.exp(weighted_arithmetic(weights, log_losses))
+        loss = sign*tf.exp(weighted_arithmetic(1/tf.reduce_sum(tf.ones_like(losses)), log_losses))
     else:
         mn = tf.reduce_min(losses) - sf
         inv_losses = tf.reciprocal(losses-mn)
